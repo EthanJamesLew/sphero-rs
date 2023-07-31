@@ -1,14 +1,15 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
+/*!
+ * Sphero API
+ */
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#![deny(non_camel_case_types)]
+#![deny(unused_parens)]
+#![deny(non_upper_case_globals)]
+#![deny(unused_qualifications)]
+#![deny(missing_docs)]
+#![deny(unused_results)]
+#![warn(unused_imports)]
+#![allow(missing_copy_implementations)]
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub mod error;
+pub mod packet;
