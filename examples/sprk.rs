@@ -1,6 +1,6 @@
 use btleplug;
-use btleplug::api::{Central, Peripheral, WriteType};
-use btleplug::bluez::manager::Manager;
+use btleplug::api::{Central, WriteType, Manager as _, Peripheral as _, ScanFilter};
+use btleplug::platform::{Adapter, Manager, Peripheral};
 use std::error::Error;
 use std::thread;
 use std::time::Duration;
@@ -20,29 +20,23 @@ fn hsv_to_rgb(h: f32) -> (u8, u8, u8) {
     (r, g, b)
 }
 
-fn turn_on_led() -> Result<(), Box<dyn Error>> {
-    let manager = Manager::new()?;
-    let adapters = manager.adapters()?;
+async fn turn_on_led() -> Result<(), Box<dyn Error>> {
+    let manager = Manager::new().await?;
+    let adapters = manager.adapters().await?;
     let adapter = adapters.into_iter().next().expect("No adapters found");
-    adapter.start_scan()?;
+    adapter.start_scan(ScanFilter::default()).await?;
 
     // Scan for Bluetooth devices for 10 seconds.
     thread::sleep(Duration::from_secs(10));
 
     // Try to find a Sphero SPRK+ device.
-    let device = adapter.peripherals().into_iter().find(|p| {
-        p.properties()
-            .local_name
-            .as_ref()
-            .map(|name| name.contains("SK-"))
-            .unwrap_or(false)
-    });
+    let device = find_sprk(&adapter).await;
 
     if let Some(device) = device {
         println!("Found device: {:?}", device);
 
         // Connect to the device.
-        device.connect()?;
+        device.connect().await?;
         println!("Connected to device");
 
         // Wake up the device
@@ -50,7 +44,7 @@ fn turn_on_led() -> Result<(), Box<dyn Error>> {
         let tx_power_characteristic_uuid = Uuid::parse_str("22bb746f-2bb2-7554-2d6f-726568705327")?;
         let wakeup_characteristic_uuid = Uuid::parse_str("22bb746f-2bbf-7554-2d6f-726568705327")?;
 
-        let characteristics = device.discover_characteristics()?;
+        let characteristics = device.characteristics();
 
         // print out characteristics
         for ch in &characteristics {
@@ -76,20 +70,20 @@ fn turn_on_led() -> Result<(), Box<dyn Error>> {
             &anti_dos_characteristic,
             b"011i3",
             WriteType::WithoutResponse,
-        )?;
+        ).await?;
         thread::sleep(Duration::from_millis(100)); // Add a short delay between write operations to make sure each operation is processed in order
 
         device.write(
             &tx_power_characteristic,
             &[0x07],
             WriteType::WithoutResponse,
-        )?;
+        ).await?;
         thread::sleep(Duration::from_millis(100));
 
-        device.write(&wakeup_characteristic, &[0x01], WriteType::WithoutResponse)?;
+        device.write(&wakeup_characteristic, &[0x01], WriteType::WithoutResponse).await?;
         thread::sleep(Duration::from_millis(100));
 
-        let characteristics = device.discover_characteristics()?;
+        let characteristics = device.characteristics();
 
         // Find the characteristic to write to.
         // The actual UUID might differ.
@@ -115,7 +109,7 @@ fn turn_on_led() -> Result<(), Box<dyn Error>> {
             let bytes_d = deku_bytes.to_bytes().unwrap();
 
             // Write to the characteristic.
-            device.write(&led_char, &bytes_d, WriteType::WithoutResponse)?;
+            device.write(&led_char, &bytes_d, WriteType::WithoutResponse).await?;
 
             // Increase hue
             hue += 0.05;
@@ -133,8 +127,25 @@ fn turn_on_led() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn main() {
-    match turn_on_led() {
+async fn find_sprk(central: &Adapter) -> Option<Peripheral> {
+    for p in central.peripherals().await.unwrap() {
+        if p.properties()
+            .await
+            .unwrap()
+            .unwrap()
+            .local_name
+            .iter()
+            .any(|name| name.contains("SK-"))
+        {
+            return Some(p);
+        }
+    }
+    None
+}
+
+#[tokio::main]
+async fn main() {
+    match turn_on_led().await {
         Ok(_) => println!("Finished"),
         Err(e) => eprintln!("Error: {:?}", e),
     }
