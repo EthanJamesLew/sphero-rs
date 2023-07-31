@@ -44,10 +44,12 @@ async fn turn_on_led() -> Result<(), Box<dyn Error>> {
         let tx_power_characteristic_uuid = Uuid::parse_str("22bb746f-2bb2-7554-2d6f-726568705327")?;
         let wakeup_characteristic_uuid = Uuid::parse_str("22bb746f-2bbf-7554-2d6f-726568705327")?;
 
+        // Collect the characteristics we want to interact with
+        device.discover_services().await?;
         let characteristics = device.characteristics();
 
         // print out characteristics
-        for ch in &characteristics {
+        for ch in characteristics.iter() {
             println!("{:?}", ch);
         }
 
