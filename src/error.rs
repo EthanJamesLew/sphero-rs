@@ -2,8 +2,6 @@
  * Sphero Error
  */
 
-use std::convert::TryInto;
-
 /// Sphero API Error Codes
 #[derive(Debug)]
 pub enum Error {

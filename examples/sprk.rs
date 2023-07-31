@@ -1,11 +1,13 @@
 use btleplug;
-use btleplug::api::{Central, CentralEvent, Characteristic, Peripheral, WriteType};
-use btleplug::bluez::{adapter::Adapter, manager::Manager};
-use sphero_rs::packet::{slip_encode, to_bytes, SpheroPacket};
+use btleplug::api::{Central, Peripheral, WriteType};
+use btleplug::bluez::manager::Manager;
 use std::error::Error;
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use uuid::Uuid;
+
+use deku::DekuContainerWrite;
+use sphero_rs::packet::{DeviceID, SpheroCommandID, SpheroCommandPacketV1};
 
 use std::f32::consts::PI;
 
@@ -105,28 +107,15 @@ fn turn_on_led() -> Result<(), Box<dyn Error>> {
             // Convert hue to RGB
             let (r, g, b) = hsv_to_rgb(hue);
 
-            // Build packet to turn on LEDs with RGB color
-            // let mut packet = SpheroPacket::new(0x01, None, None, 0x02, 0x20, 0x01, None, vec![r, g, b]);
-            let mut packet = SpheroPacket::new(
-                0b00010000,
-                None,
-                None,
-                0x01,
-                0x20,
-                0x00,
-                None,
-                vec![0xFF, 0x00, 0x00],
-            );
+            let did: u8 = DeviceID::Sphero as u8; // = device id
+            let cid: u8 = SpheroCommandID::SetRGBLEDOutput as u8;
+            let seq: u8 = 0x06; // = sequence number
 
-            let mut bytes = vec![0xff, 0x02, 0x20, 0x06, 0x04, r, g, b];
-            let chk = !bytes.iter().fold(0u8, |acc, &x| acc.wrapping_add(x)) - 1;
-            bytes.push(chk);
-            bytes.insert(0, 0xff);
-
-            //slip_encode(&mut packet);
+            let deku_bytes = SpheroCommandPacketV1::new(did, cid, seq, vec![r, g, b]);
+            let bytes_d = deku_bytes.to_bytes().unwrap();
 
             // Write to the characteristic.
-            device.write(&led_char, &bytes, WriteType::WithoutResponse)?;
+            device.write(&led_char, &bytes_d, WriteType::WithoutResponse)?;
 
             // Increase hue
             hue += 0.05;
@@ -134,13 +123,9 @@ fn turn_on_led() -> Result<(), Box<dyn Error>> {
                 hue -= 2.0 * PI;
             }
 
-            // Wait for 200ms before sending the next packet
+            // Wait for 50ms before sending the next packet
             thread::sleep(Duration::from_millis(50));
         }
-
-        // Disconnect from the device.
-        // device.disconnect()?;
-        // println!("Disconnected from device");
     } else {
         println!("No Sphero SPRK+ found")
     };
