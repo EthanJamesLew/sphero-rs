@@ -4,29 +4,28 @@
 use deku::prelude::*;
 
 /// Sphero Command Packet V1
-/// https://docs.gosphero.com/api/Sphero_API_1.20.pdf (Page 7)
-#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+/// <https://docs.gosphero.com/api/Sphero_API_1.20.pdf> (Page 7)
+#[derive(Default, Debug, PartialEq, DekuRead, DekuWrite)]
 pub struct SpheroCommandPacketV1 {
     sop1: SOP1Field,
     sop2: SOP2Field,
-    did: u8,
+    did: DeviceID,
     cid: u8,
     seq: u8,
     #[deku(update = "self.data.len() + 1")]
     dlen: u8,
     #[deku(count = "dlen")]
     data: Vec<u8>,
-    #[deku(update = "calculate_checksum(&[self.did, self.cid, self.seq, self.dlen], &self.data)")]
+    #[deku(update = "calculate_checksum(&[self.did as u8, self.cid, self.seq, self.dlen], &self.data)")]
     chk: u8,
 }
 
 /// Sphero Response Packet V1
-/// https://docs.gosphero.com/api/Sphero_API_1.20.pdf (Page 7)
-#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
-#[deku(endian = "big")]
+/// <https://docs.gosphero.com/api/Sphero_API_1.20.pdf> (Page 7)
+#[derive(Default, Debug, PartialEq, DekuRead, DekuWrite)]
 pub struct SpheroResponsePacketV1 {
-    sop1: u8,
-    sop2: u8,
+    sop1: SOP1Field,
+    sop2: SOP2Field,
     mrsp: u8,
     seq: u8,
     #[deku(update = "self.data.len() + 1")]
@@ -39,8 +38,8 @@ pub struct SpheroResponsePacketV1 {
 
 impl SpheroCommandPacketV1 {
     /// Create a new packet
-    pub fn new(did: u8, sid: u8, seq: u8, data: Vec<u8>) -> Self {
-        let chk = calculate_checksum(&[did, sid, seq, data.len() as u8 + 1], &data);
+    pub fn new(did: DeviceID, sid: u8, seq: u8, data: Vec<u8>) -> Self {
+        let chk = calculate_checksum(&[did as u8, sid, seq, data.len() as u8 + 1], &data);
         Self {
             sop1: SOP1Field::All,
             sop2: SOP2Field::Response,
@@ -66,19 +65,21 @@ pub fn calculate_checksum(fields: &[u8], data: &[u8]) -> u8 {
 }
 
 /// Sphero Packet SOP1 Values
-#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[derive(Default, Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite)]
 #[deku(type = "u8", endian = "big")]
 pub enum SOP1Field {
     /// Acknowledgement Required (Command) or Acknowledgement (Response)
+    #[default]
     #[deku(id = "0xff")]
     All = 0xff,
 }
 
 /// Sphero Packet SOP2 Values
-#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[derive(Default, Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite)]
 #[deku(type = "u8", endian = "big")]
 pub enum SOP2Field {
     /// Acknowledgement Required (Command) or Acknowledgement (Response)
+    #[default]
     #[deku(id = "0xff")]
     Response = 0xff,
     /// Asynchronous Message
@@ -87,7 +88,7 @@ pub enum SOP2Field {
 }
 
 /// Sphero Device ID
-#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[derive(Default, Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite)]
 #[deku(type = "u8", endian = "big")]
 pub enum DeviceID {
     /// The Core
@@ -97,14 +98,15 @@ pub enum DeviceID {
     #[deku(id = "0x01")]
     Bootloader = 0x01,
     /// Sphero
+    #[default]
     #[deku(id = "0x02")]
     Sphero = 0x02,
 }
 
 /// Device ID 00h – The Core
-/// https://docs.gosphero.com/api/Sphero_API_1.20.pdf (Page 11)
+/// <https://docs.gosphero.com/api/Sphero_API_1.20.pdf> (Page 11)
 /// The Core Device encapsulates actions that are fundamental to all Orbotix devices.
-#[derive(Debug, PartialEq, DekuRead, DekuWrite)]
+#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite)]
 #[deku(type = "u8", endian = "big")]
 pub enum CoreCommandID {
     /// Ping
@@ -164,7 +166,7 @@ pub enum CoreCommandID {
 }
 
 /// Device ID 01h – Bootloader
-/// https://docs.gosphero.com/api/Sphero_API_1.20.pdf (Page 22)
+/// <https://docs.gosphero.com/api/Sphero_API_1.20.pdf> (Page 22)
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(type = "u8", endian = "big")]
 pub enum BootloaderCommandID {
@@ -186,7 +188,7 @@ pub enum BootloaderCommandID {
 }
 
 /// Device ID 02h – Sphero
-/// https://docs.gosphero.com/api/Sphero_API_1.20.pdf (Page 23)
+/// <https://docs.gosphero.com/api/Sphero_API_1.20.pdf> (Page 23)
 #[derive(Debug, PartialEq, DekuRead, DekuWrite)]
 #[deku(type = "u8", endian = "big")]
 pub enum SpheroCommandID {

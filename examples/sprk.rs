@@ -107,7 +107,7 @@ fn turn_on_led() -> Result<(), Box<dyn Error>> {
             // Convert hue to RGB
             let (r, g, b) = hsv_to_rgb(hue);
 
-            let did: u8 = DeviceID::Sphero as u8; // = device id
+            let did = DeviceID::Sphero; // = device id
             let cid: u8 = SpheroCommandID::SetRGBLEDOutput as u8;
             let seq: u8 = 0x06; // = sequence number
 
