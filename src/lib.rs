@@ -11,6 +11,6 @@
 #![warn(unused_imports)]
 #![allow(missing_copy_implementations)]
 
+pub mod command;
 pub mod error;
 pub mod packet;
-pub mod command;

@@ -14,9 +14,11 @@ pub struct SpheroCommandPacketV1 {
     seq: u8,
     #[deku(update = "self.data.len() + 1")]
     dlen: u8,
-    #[deku(count = "dlen")]
+    #[deku(count = "dlen - 1")]
     data: Vec<u8>,
-    #[deku(update = "calculate_checksum(&[self.did as u8, self.cid, self.seq, self.dlen], &self.data)")]
+    #[deku(
+        update = "calculate_checksum(&[self.did as u8, self.cid, self.seq, self.dlen], &self.data)"
+    )]
     chk: u8,
 }
 
@@ -26,13 +28,30 @@ pub struct SpheroCommandPacketV1 {
 pub struct SpheroResponsePacketV1 {
     sop1: SOP1Field,
     sop2: SOP2Field,
-    mrsp: u8,
+    mrsp: MRSPField,
     seq: u8,
     #[deku(update = "self.data.len() + 1")]
     dlen: u8,
-    #[deku(count = "dlen")]
+    #[deku(count = "dlen - 1")]
     data: Vec<u8>,
-    #[deku(update = "calculate_checksum(&[self.mrsp, self.seq, self.dlen], &self.data)")]
+    #[deku(update = "calculate_checksum(&[self.mrsp as u8, self.seq, self.dlen], &self.data)")]
+    chk: u8,
+}
+
+/// Sphero Asynchronous Packet V1
+/// <https://docs.gosphero.com/api/Sphero_API_1.20.pdf> (Page 9)
+#[derive(Default, Debug, PartialEq, DekuRead, DekuWrite)]
+pub struct SpheroAsynchronousPacketV1 {
+    sop1: SOP1Field,
+    sop2: SOP2Field,
+    idcode: u8,
+    #[deku(update = "self.data.len() + 1")]
+    dlen: u16,
+    #[deku(count = "dlen - 1")]
+    data: Vec<u8>,
+    #[deku(
+        update = "calculate_checksum(&[self.idcode, (self.dlen >> 8) as u8, self.dlen as u8], &self.data)"
+    )]
     chk: u8,
 }
 
@@ -85,6 +104,59 @@ pub enum SOP2Field {
     /// Asynchronous Message
     #[deku(id = "0xfe")]
     Async = 0xfe,
+}
+
+/// Sphero Message Response Codes
+/// <https://docs.gosphero.com/api/Sphero_API_1.20.pdf> (Page 44)
+#[derive(Default, Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite)]
+#[deku(type = "u8", endian = "big")]
+pub enum MRSPField {
+    /// Command succeeded
+    #[default]
+    #[deku(id = "0x00")]
+    Ok = 0x00,
+    /// General, non-specific error
+    #[deku(id = "0x01")]
+    GeneralError = 0x01,
+    /// Received a bad checksum
+    #[deku(id = "0x02")]
+    ChecksumError = 0x02,
+    /// Received command fragment
+    #[deku(id = "0x03")]
+    FragmentError = 0x03,
+    /// Unknown command ID
+    #[deku(id = "0x04")]
+    UnknownCommandError = 0x04,
+    /// Command currently unsupported
+    #[deku(id = "0x05")]
+    UnsupportedCommandError = 0x05,
+    /// Bad message format
+    #[deku(id = "0x06")]
+    BadMessageFormatError = 0x06,
+    /// Parameter value(s) invalid
+    #[deku(id = "0x07")]
+    InvalidParameterError = 0x07,
+    /// Failed to execute command
+    #[deku(id = "0x08")]
+    ExecuteError = 0x08,
+    /// Unknown device ID
+    #[deku(id = "0x09")]
+    UnknownDeviceError = 0x09,
+    /// voltage too low for reflash operation
+    #[deku(id = "0x31")]
+    LowVoltageError = 0x31,
+    /// Illegal page number provided
+    #[deku(id = "0x32")]
+    IllegalPageError = 0x32,
+    /// Page did not reprogram correctly
+    #[deku(id = "0x33")]
+    FlashFailError = 0x33,
+    /// Main application corrupt
+    #[deku(id = "0x34")]
+    MainAppCorruptError = 0x34,
+    /// Msg state machine timed out
+    #[deku(id = "0x35")]
+    MsgTimeoutError = 0x35,
 }
 
 /// Sphero Device ID
