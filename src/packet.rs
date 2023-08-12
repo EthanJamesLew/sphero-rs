@@ -1,5 +1,12 @@
 /*!
  * Sphero Packet
+ * 
+ * Implements the packet structures defined in the v1.20 API
+ * 
+ * A lightweight command and control protocol which you can use 
+ * to build up applications offering a higher level of functionality. 
+ * 
+ * Multi-byte numbers are sent MSB first in both directions
  */
 use deku::prelude::*;
 
@@ -160,6 +167,8 @@ pub enum MRSPField {
 }
 
 /// Sphero Device ID
+/// From the spec: "Sphero is an actual device (obviously) but in his 
+/// core software, many virtual devices are implemented."
 #[derive(Default, Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite)]
 #[deku(type = "u8", endian = "big")]
 pub enum DeviceID {

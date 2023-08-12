@@ -1,13 +1,25 @@
 /*!
  * Sphero Commands
  */
-use crate::packet::{DeviceID, SpheroCommandID, SpheroCommandPacketV1};
+use crate::packet::{DeviceID, SpheroCommandID, SpheroCommandPacketV1, CoreCommandID};
 
 /// Sphero Command Conversion (requires seq)
 pub trait ToCommandPacket {
     /// Convert to a Sphero Command Packet
     fn to_packet(&self, seq: u8) -> SpheroCommandPacketV1;
 }
+
+/// Sphero Ping Command
+#[derive(Debug, Default)]
+pub struct Ping {}
+
+/// Sphero Get Versioning Command
+#[derive(Debug, Default)]
+pub struct GetVersioning {}
+
+/// Sphero Get Bluetooth Info Command
+#[derive(Debug, Default)]
+pub struct GetBluetoothInfo {}
 
 /// Sphero Set RGB LED Output Command
 #[derive(Debug, Default)]
@@ -58,6 +70,39 @@ pub struct SetDataStreaming {
     pub pcnt: u8,
     /// Bitwise selector of more data sources to stream (optional)
     pub mask2: Option<u32>,
+}
+
+impl ToCommandPacket for Ping {
+    fn to_packet(&self, seq: u8) -> SpheroCommandPacketV1 {
+        let did = DeviceID::Core; // = device id
+        let cid: u8 = CoreCommandID::Ping as u8;
+        let seq: u8 = seq; // = sequence number
+
+        let deku_bytes = SpheroCommandPacketV1::new(did, cid, seq, vec![]);
+        deku_bytes
+    }
+}
+
+impl ToCommandPacket for GetVersioning {
+    fn to_packet(&self, seq: u8) -> SpheroCommandPacketV1 {
+        let did = DeviceID::Core; // = device id
+        let cid: u8 = CoreCommandID::GetVersioningInformation as u8;
+        let seq: u8 = seq; // = sequence number
+
+        let deku_bytes = SpheroCommandPacketV1::new(did, cid, seq, vec![]);
+        deku_bytes
+    }
+}
+
+impl ToCommandPacket for GetBluetoothInfo {
+    fn to_packet(&self, seq: u8) -> SpheroCommandPacketV1 {
+        let did = DeviceID::Core; // = device id
+        let cid: u8 = CoreCommandID::GetBluetoothInfo as u8;
+        let seq: u8 = seq; // = sequence number
+
+        let deku_bytes = SpheroCommandPacketV1::new(did, cid, seq, vec![]);
+        deku_bytes
+    }
 }
 
 impl ToCommandPacket for SetRGBLEDOutput {

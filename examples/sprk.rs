@@ -117,7 +117,7 @@ async fn turn_on_led() -> Result<(), Box<dyn Error>> {
                         Ok((_, response)) => {
                             println!("Received data from [{:?}]: {:?}", data.uuid, response);
                         }
-                        Err(e) => match response_async {
+                        Err(_) => match response_async {
                             Ok((_, response_async)) => {
                                 println!(
                                     "Received data from [{:?}]: {:?}",
@@ -152,21 +152,6 @@ async fn turn_on_led() -> Result<(), Box<dyn Error>> {
         // Start with a hue of 0
         let mut hue: f32 = 0.0;
 
-        // set the streaming mask
-        let bytes_d = SetDataStreaming {
-            n: 2,
-            m: 1,
-            mask1: 0xffffffff,
-            pcnt: 0,
-            mask2: None,
-        }
-        .to_packet(0xff)
-        .to_bytes()
-        .unwrap();
-        device
-            .write(&led_char, &bytes_d, WriteType::WithoutResponse)
-            .await?;
-
         // Loop to run forever
         loop {
             // Convert hue to RGB
@@ -183,7 +168,7 @@ async fn turn_on_led() -> Result<(), Box<dyn Error>> {
             .unwrap();
 
             // Write to the characteristic.
-            // device.write(&led_char, &bytes_d, WriteType::WithoutResponse).await?;
+            device.write(&led_char, &bytes_d, WriteType::WithoutResponse).await?;
 
             // Increase hue
             hue += 0.05;
